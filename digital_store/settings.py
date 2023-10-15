@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     "rest_framework",
     # A P P S
     "products",
+    "users",
 ]
 
 MIDDLEWARE = [
@@ -99,7 +100,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
-LANGUAGE_CODE = "fa"
+LANGUAGE_CODE = "en-us"
 
 TIME_ZONE = "Asia/Tehran"
 
@@ -120,3 +121,14 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Media Files
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
 MEDIA_URL = '/media/'
+
+# Custom User
+AUTH_USER_MODEL = "users.User"
+
+# Use cache redis
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379",
+    }
+}
