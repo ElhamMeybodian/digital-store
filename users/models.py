@@ -49,6 +49,15 @@ class User(AbstractBaseUser, PermissionsMixin):
     """
     Username, password, email and phone number are required. Other fields are optional.
     """
+
+    class Types(models.TextChoices):
+        CUSTOMER = "CUSTOMER", "customer"
+        STAFF = "STAFF", "staff"
+        ADMIN = "ADMIN", "admin"
+
+    type = models.CharField(max_length=8, choices=Types.choices,
+                            # Default is user is customer
+                            default=Types.CUSTOMER)
     username = models.CharField(_('username'), max_length=30, unique=True,
                                 help_text=_('Required. 30 characters or fewer. Letters, numbers and '
                                             '@/./+/-/_ characters'),
@@ -63,18 +72,19 @@ class User(AbstractBaseUser, PermissionsMixin):
     first_name = models.CharField(_("first name"), max_length=30, blank=True)
     last_name = models.CharField(_("last name"), max_length=30, blank=True)
     email = models.EmailField(_("email address"), unique=True, blank=True, null=True)
-    phone_number = models.BigIntegerField(_('mobile_number'), unique=True, null=True, blank=True,
-                                          validators=[
-                                              validators.RegexValidator(r'^989[0-3,9]\d{8}$',
-                                                                        _('Enter a valid phone number'), 'invalid')
-                                          ],
+    phone_number = models.BigIntegerField(_('mobile_number'), unique=True, null=True, blank=True
+                                          , validators=[
+            validators.RegexValidator(r'^989[0-3,9]\d{8}$',
+                                      _('Enter a valid phone number'), 'invalid')
+        ],
                                           error_messages={
                                               'unique': _("A user with that phone number already exists")
 
-                                          })
+                                          }
+                                          )
     is_staff = models.BooleanField(_('staff status'), default=False,
                                    help_text=_('Designates whether the user can log into this admin site.'))
-    is_active = models.BooleanField(_('active'), default=True,
+    is_active = models.BooleanField(_('active'), default=False,
                                     help_text=_('Designates whether this user should be treated as '
                                                 'active. Unselect this instead of deleting accounts.'))
     date_joined = models.DateTimeField(_('date joined'), default=timezone.now)
@@ -187,3 +197,73 @@ class Province(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class CustomerManager(models.Manager):
+    def create_user(self, username, phone_number, email, password, **extra_fields):
+        now = timezone.now()
+        if not username:
+            raise ValueError(_('The given username must be set'))
+        email = self.normalize_email(email)
+        user = self.model(phone_number=phone_number,
+                          username=username,
+                          email=email, is_staff=False, is_active=True,
+                          is_superuser=False, date_joined=now, **extra_fields)
+        if not extra_fields.get('no_password'):
+            user.set_password(password)
+
+        user.save(using=self._db)
+        return user
+
+    def get_queryset(self, *args, **kwargs):
+        queryset = super().get_queryset(*args, **kwargs)
+        queryset = queryset.filter(type=User.Types.CUSTOMER)
+        return queryset
+
+
+class Customer(User):
+    class Meta:
+        proxy = True
+        verbose_name = 'customer'
+        verbose_name_plural = 'customers'
+
+    objects = CustomerManager()
+
+    def save(self, *args, **kwargs):
+        self.type = User.Types.CUSTOMER
+        return super().save(*args, **kwargs)
+
+
+class AdminManager(models.Manager):
+    def create_user(self, username, phone_number, email, password, **extra_fields):
+        now = timezone.now()
+        if not username:
+            raise ValueError(_('The given username must be set'))
+        email = self.normalize_email(email)
+        user = self.model(phone_number=phone_number,
+                          username=username,
+                          email=email, is_staff=True, is_active=True,
+                          is_superuser=True, date_joined=now, **extra_fields)
+        if not extra_fields.get('no_password'):
+            user.set_password(password)
+
+        user.save(using=self._db)
+        return user
+
+    def get_queryset(self, *args, **kwargs):
+        queryset = super().get_queryset(*args, **kwargs)
+        queryset = queryset.filter(type=User.Types.ADMIN)
+        return queryset
+
+
+class AdminSite(User):
+    class Meta:
+        proxy = True
+        verbose_name = 'Admin'
+        verbose_name_plural = 'Admin'
+
+    objects = AdminManager()
+
+    def save(self, *args, **kwargs):
+        self.type = User.Types.ADMIN
+        return super().save(*args, **kwargs)
