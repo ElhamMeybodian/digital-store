@@ -10,6 +10,7 @@ source venv/bin/activate
 > pip install -r requirements.txt
 
 3- Create your env
+
 4- Create tables
 ```
 python manage.py makemigrations
