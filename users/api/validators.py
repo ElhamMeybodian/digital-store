@@ -20,5 +20,5 @@ def check_difficulty_password(value, difficulty_level):
 
 def password_difficulty(value):
     message = _('password strength not enough')
-    if check_difficulty_password(value, "medium") is None:
+    if check_difficulty_password(value, 0) is None:
         raise serializers.ValidationError(message)
